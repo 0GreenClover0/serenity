@@ -278,26 +278,26 @@ static CSSPixelSize solve_replaced_size_constraint(LayoutState const& state, CSS
     auto min_height = min(specified_min_height, specified_max_height);
     auto max_height = max(specified_min_height, specified_max_height);
 
-    if (w > max_width)
-        return { w, max(max_width * (h / w), min_height) };
-    if (w < min_width)
-        return { max_width, min(min_width * (h / w), max_height) };
-    if (h > max_height)
-        return { max(max_height * (w / h), min_width), max_height };
-    if (h < min_height)
-        return { min(min_height * (w / h), max_width), min_height };
-    if ((w > max_width && h > max_height) && (max_width / w < max_height / h))
-        return { max_width, max(min_height, max_width * (h / w)) };
-    if ((w > max_width && h > max_height) && (max_width / w > max_height / h))
-        return { max(min_width, max_height * (w / h)), max_height };
-    if ((w < min_width && h < min_height) && (min_width / w < min_height / h))
-        return { min(max_width, min_height * (w / h)), min_height };
-    if ((w < min_width && h < min_height) && (min_width / w > min_height / h))
-        return { min_width, min(max_height, min_width * (h / w)) };
-    if (w < min_width && h > max_height)
-        return { min_width, max_height };
     if (w > max_width && h < min_height)
         return { max_width, min_height };
+    if (w < min_width && h > max_height)
+        return { min_width, max_height };
+    if ((w < min_width && h < min_height) && (min_width / w > min_height / h))
+        return { min_width, min(max_height, min_width * (h / w)) };
+    if ((w < min_width && h < min_height) && (min_width / w <= min_height / h))
+        return { min(max_width, min_height * (w / h)), min_height };
+    if ((w > max_width && h > max_height) && (max_width / w > max_height / h))
+        return { max(min_width, max_height * (w / h)), max_height };
+    if ((w > max_width && h > max_height) && (max_width / w <= max_height / h))
+        return { max_width, max(min_height, max_width * (h / w)) };
+    if (h < min_height)
+        return { min(min_height * (w / h), max_width), min_height };
+    if (h > max_height)
+        return { max(max_height * (w / h), min_width), max_height };
+    if (w < min_width)
+        return { min_width, min(min_width * (h / w), max_height) };
+    if (w > max_width)
+        return { w, max(max_width * (h / w), min_height) };
     return { w, h };
 }
 
