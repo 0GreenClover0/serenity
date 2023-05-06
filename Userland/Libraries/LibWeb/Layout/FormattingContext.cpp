@@ -421,11 +421,11 @@ void FormattingContext::compute_height_for_absolutely_positioned_element(Box con
         compute_height_for_absolutely_positioned_non_replaced_element(box, available_space, before_or_after_inside_layout);
 }
 
+// 10.3.2 Inline, replaced elements
+// 10.3.4 Block-level, replaced elements in normal flow...
+// https://www.w3.org/TR/CSS22/visudet.html#min-max-widths
 CSSPixels FormattingContext::compute_width_for_replaced_element(LayoutState const& state, ReplacedBox const& box, AvailableSpace const& available_space)
 {
-    // 10.3.4 Block-level, replaced elements in normal flow...
-    // 10.3.2 Inline, replaced elements
-
     auto zero_value = CSS::Length::make_px(0);
     auto width_of_containing_block_as_length = CSS::Length::make_px(available_space.width.to_px());
 
@@ -439,9 +439,11 @@ CSSPixels FormattingContext::compute_width_for_replaced_element(LayoutState cons
         margin_right = zero_value;
 
     auto computed_width = should_treat_width_as_auto(box, available_space) ? CSS::Size::make_auto() : box.computed_values().width();
+    auto computed_height = should_treat_height_as_auto(box, available_space) ? CSS::Size::make_auto() : box.computed_values().height();
 
     // 1. The tentative used width is calculated (without 'min-width' and 'max-width')
     auto used_width = tentative_width_for_replaced_element(state, box, computed_width, available_space);
+    auto original_tentative_width = used_width;
 
     // 2. The tentative used width is greater than 'max-width', the rules above are applied again,
     //    but this time using the computed value of 'max-width' as the computed value for 'width'.
@@ -459,6 +461,20 @@ CSSPixels FormattingContext::compute_width_for_replaced_element(LayoutState cons
         if (used_width < computed_min_width.resolved(box, width_of_containing_block_as_length).to_px(box)) {
             used_width = tentative_width_for_replaced_element(state, box, computed_min_width, available_space);
         }
+    }
+
+    // However, for replaced elements with an intrinsic ratio and both 'width' and 'height' specified as 'auto',
+    // the algorithm is as follows:
+    // Select from the table the resolved height and width values for the appropriate constraint violation.
+    // Take the max-width and max-height as max(min, max) so that min ≤ max holds true.
+    // In this table w and h stand for the results of the width and height computations ignoring the
+    // 'min-width', 'min-height', 'max-width' and 'max-height' properties.
+    // Normally these are the intrinsic width and height, but they may not be in the case of replaced elements
+    // with intrinsic ratios.
+    if (computed_width.is_auto() && computed_height.is_auto() && box.has_intrinsic_aspect_ratio()) {
+        CSSPixels w = original_tentative_width;
+        CSSPixels h = tentative_height_for_replaced_element(state, box, computed_height, available_space);
+        used_width = solve_replaced_size_constraint(state, w, h, box).width();
     }
 
     return used_width;
