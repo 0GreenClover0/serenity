@@ -29,8 +29,15 @@ private:
         Yes
     };
 
-    ErrorOr<void> build_serenity_component();
-    ErrorOr<void> run_serenity_component();
+    struct Command {
+        DeprecatedString command;
+        Optional<DeprecatedString> working_directory = {};
+        TerminalWrapper::WaitForExit wait_for_exit = TerminalWrapper::WaitForExit::No;
+        Optional<StringView> failure_message = {};
+    };
+
+    ErrorOr<ProjectBuilder::Command> get_build_command(StringView active_file);
+    ErrorOr<ProjectBuilder::Command> get_run_command(StringView active_file);
     ErrorOr<void> initialize_build_directory();
     Optional<DeprecatedString> find_cmake_file_for(StringView file_path) const;
     DeprecatedString generate_cmake_file_content() const;

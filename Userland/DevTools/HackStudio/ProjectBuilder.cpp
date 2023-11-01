@@ -26,61 +26,68 @@ ErrorOr<void> ProjectBuilder::build(StringView active_file)
 {
     m_terminal->clear_including_history();
 
-    if (auto command = m_project.config()->build_command(); command.has_value()) {
-        TRY(m_terminal->run_command(command.value()));
-        return {};
-    }
-
-    if (active_file.is_null())
-        return Error::from_string_literal("no active file");
-
-    if (active_file.ends_with(".js"sv)) {
-        TRY(m_terminal->run_command(DeprecatedString::formatted("js -A {}", active_file)));
-        return {};
-    }
-
-    if (m_is_serenity == IsSerenityRepo::No) {
-        TRY(verify_make_is_installed());
-        TRY(m_terminal->run_command("make"));
-        return {};
-    }
-
-    TRY(update_active_file(active_file));
-
-    return build_serenity_component();
+    auto build_command = TRY(get_build_command(active_file));
+    TRY(m_terminal->run_command(build_command.command, build_command.working_directory, build_command.wait_for_exit, build_command.failure_message));
+    return {};
 }
 
 ErrorOr<void> ProjectBuilder::run(StringView active_file)
 {
-    if (auto command = m_project.config()->run_command(); command.has_value()) {
-        TRY(m_terminal->run_command(command.value()));
-        return {};
-    }
+    auto run_command = TRY(get_run_command(active_file));
+    TRY(m_terminal->run_command(run_command.command, run_command.working_directory, run_command.wait_for_exit, run_command.failure_message));
+    return {};
+}
+
+ErrorOr<ProjectBuilder::Command> ProjectBuilder::get_run_command(StringView active_file)
+{
+    if (auto command = m_project.config()->run_command(); command.has_value())
+        return ProjectBuilder::Command { command.value() };
 
     if (active_file.is_null())
         return Error::from_string_literal("no active file");
 
-    if (active_file.ends_with(".js"sv)) {
-        TRY(m_terminal->run_command(DeprecatedString::formatted("js {}", active_file)));
-        return {};
-    }
+    if (active_file.ends_with(".js"sv))
+        return ProjectBuilder::Command { DeprecatedString::formatted("js {}", active_file) };
 
     if (m_is_serenity == IsSerenityRepo::No) {
         TRY(verify_make_is_installed());
-        TRY(m_terminal->run_command("make run"));
-        return {};
+        return ProjectBuilder::Command { "make run" };
     }
 
     TRY(update_active_file(active_file));
 
-    return run_serenity_component();
+    auto relative_path_to_dir = LexicalPath::relative_path(LexicalPath::dirname(m_serenity_component_cmake_file), m_project_root);
+    return ProjectBuilder::Command {
+        .command = LexicalPath::join(relative_path_to_dir, m_serenity_component_name).string(),
+        .working_directory = build_directory()
+    };
 }
 
-ErrorOr<void> ProjectBuilder::run_serenity_component()
+ErrorOr<ProjectBuilder::Command> ProjectBuilder::get_build_command(StringView active_file)
 {
-    auto relative_path_to_dir = LexicalPath::relative_path(LexicalPath::dirname(m_serenity_component_cmake_file), m_project_root);
-    TRY(m_terminal->run_command(LexicalPath::join(relative_path_to_dir, m_serenity_component_name).string(), build_directory()));
-    return {};
+    if (auto command = m_project.config()->build_command(); command.has_value())
+        return ProjectBuilder::Command { command.value() };
+
+    if (active_file.is_null())
+        return Error::from_string_literal("no active file");
+
+    if (active_file.ends_with(".js"sv))
+        return ProjectBuilder::Command { DeprecatedString::formatted("js -A {}", active_file) };
+
+    if (m_is_serenity == IsSerenityRepo::No) {
+        TRY(verify_make_is_installed());
+        return ProjectBuilder::Command { "make" };
+    }
+
+    TRY(update_active_file(active_file));
+
+    TRY(verify_make_is_installed());
+    return ProjectBuilder::Command {
+        .command = DeprecatedString::formatted("make {}", m_serenity_component_name),
+        .working_directory = build_directory(),
+        .wait_for_exit = TerminalWrapper::WaitForExit::Yes,
+        .failure_message = "Make failed"sv
+    };
 }
 
 ErrorOr<void> ProjectBuilder::update_active_file(StringView active_file)
@@ -99,13 +106,6 @@ ErrorOr<void> ProjectBuilder::update_active_file(StringView active_file)
     m_serenity_component_name = TRY(component_name(m_serenity_component_cmake_file));
 
     TRY(initialize_build_directory());
-    return {};
-}
-
-ErrorOr<void> ProjectBuilder::build_serenity_component()
-{
-    TRY(verify_make_is_installed());
-    TRY(m_terminal->run_command(DeprecatedString::formatted("make {}", m_serenity_component_name), build_directory(), TerminalWrapper::WaitForExit::Yes, "Make failed"sv));
     return {};
 }
 
