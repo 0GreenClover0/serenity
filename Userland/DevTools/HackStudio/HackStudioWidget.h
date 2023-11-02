@@ -126,6 +126,7 @@ private:
     ErrorOr<NonnullRefPtr<GUI::Action>> create_debug_action();
     ErrorOr<NonnullRefPtr<GUI::Action>> create_build_action();
     ErrorOr<NonnullRefPtr<GUI::Action>> create_run_action();
+    ErrorOr<NonnullRefPtr<GUI::Action>> create_build_and_run_action();
     ErrorOr<NonnullRefPtr<GUI::Action>> create_stop_action();
     ErrorOr<NonnullRefPtr<GUI::Action>> create_toggle_syntax_highlighting_mode_action();
     ErrorOr<NonnullRefPtr<GUI::Action>> create_open_project_configuration_action();
@@ -159,6 +160,7 @@ private:
 
     void run();
     void build();
+    void build_and_run();
 
     void hide_action_tabs();
     bool any_document_is_dirty() const;
@@ -248,6 +250,7 @@ private:
     RefPtr<GUI::Action> m_debug_action;
     RefPtr<GUI::Action> m_build_action;
     RefPtr<GUI::Action> m_run_action;
+    RefPtr<GUI::Action> m_build_and_run_action;
     RefPtr<GUI::Action> m_locations_history_back_action;
     RefPtr<GUI::Action> m_locations_history_forward_action;
     RefPtr<GUI::Action> m_toggle_semantic_highlighting_action;

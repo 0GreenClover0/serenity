@@ -22,6 +22,7 @@ public:
 
     ErrorOr<void> build(StringView active_file);
     ErrorOr<void> run(StringView active_file);
+    ErrorOr<void> build_and_run(StringView active_file);
 
 private:
     enum class IsSerenityRepo {

@@ -90,6 +90,16 @@ ErrorOr<ProjectBuilder::Command> ProjectBuilder::get_build_command(StringView ac
     };
 }
 
+ErrorOr<void> ProjectBuilder::build_and_run(StringView active_file)
+{
+    auto build_command = TRY(get_build_command(active_file));
+    auto run_command = TRY(get_run_command(active_file));
+
+    TRY(m_terminal->run_command(build_command.command, build_command.working_directory, TerminalWrapper::WaitForExit::Yes, build_command.failure_message));
+    TRY(m_terminal->run_command(run_command.command, run_command.working_directory, run_command.wait_for_exit, run_command.failure_message));
+    return {};
+}
+
 ErrorOr<void> ProjectBuilder::update_active_file(StringView active_file)
 {
     TRY(verify_cmake_is_installed());

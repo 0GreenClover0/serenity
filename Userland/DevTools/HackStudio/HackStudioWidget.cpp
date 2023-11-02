@@ -142,6 +142,7 @@ ErrorOr<NonnullRefPtr<HackStudioWidget>> HackStudioWidget::create(DeprecatedStri
     widget->m_open_project_configuration_action = TRY(widget->create_open_project_configuration_action());
     widget->m_build_action = TRY(widget->create_build_action());
     widget->m_run_action = TRY(widget->create_run_action());
+    widget->m_build_and_run_action = TRY(widget->create_build_and_run_action());
     widget->m_stop_action = TRY(widget->create_stop_action());
     widget->m_debug_action = TRY(widget->create_debug_action());
 
@@ -1172,6 +1173,21 @@ void HackStudioWidget::run()
     }
 }
 
+void HackStudioWidget::build_and_run()
+{
+    m_stop_action->set_enabled(true);
+
+    auto result = m_project_builder->build_and_run(active_file());
+    if (result.is_error()) {
+        GUI::MessageBox::show(window(), DeprecatedString::formatted("{}", result.error()), "Build and Run Failed"sv, GUI::MessageBox::Type::Error);
+        m_build_action->set_enabled(true);
+        m_run_action->set_enabled(true);
+        m_stop_action->set_enabled(false);
+    } else {
+        m_stop_action->set_enabled(true);
+    }
+}
+
 void HackStudioWidget::hide_action_tabs()
 {
     m_action_tab_widget->set_preferred_height(24);
@@ -1321,6 +1337,23 @@ ErrorOr<NonnullRefPtr<GUI::Action>> HackStudioWidget::create_build_action()
 
         reveal_action_tab(*m_terminal_wrapper);
         build();
+    });
+}
+
+ErrorOr<NonnullRefPtr<GUI::Action>> HackStudioWidget::create_build_and_run_action()
+{
+    return GUI::Action::create("Build and Run", { Mod_Ctrl, Key_F5 }, [this](auto&) {
+        if (m_auto_save_before_build_or_run) {
+            if (!save_file_changes())
+                return;
+        } else {
+            if (warn_unsaved_changes("There are unsaved changes, do you want to save before building and running?") == ContinueDecision::No)
+                return;
+        }
+
+        reveal_action_tab(*m_terminal_wrapper);
+
+        build_and_run();
     });
 }
 
@@ -1500,6 +1533,7 @@ void HackStudioWidget::create_build_menu(GUI::Window& window)
 {
     auto build_menu = window.add_menu("&Build"_string);
     build_menu->add_action(*m_build_action);
+    build_menu->add_action(*m_build_and_run_action);
     build_menu->add_separator();
     build_menu->add_action(*m_run_action);
     build_menu->add_action(*m_stop_action);
