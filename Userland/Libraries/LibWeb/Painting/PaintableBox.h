@@ -25,7 +25,7 @@ public:
 
     virtual void paint(PaintContext&, PaintPhase) const override;
 
-    virtual Optional<CSSPixelRect> get_masking_area() const { return {}; }
+    virtual Optional<CSSPixelRect> get_masking_area() const;
     virtual Optional<Gfx::Bitmap::MaskKind> get_mask_type() const { return {}; }
     virtual RefPtr<Gfx::Bitmap> calculate_mask(PaintContext&, CSSPixelRect const&) const { return {}; }
 

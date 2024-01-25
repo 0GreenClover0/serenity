@@ -811,6 +811,9 @@ void NodeWithStyle::apply_style(const CSS::StyleProperties& computed_style)
     if (auto mask = computed_style.property(CSS::PropertyID::Mask); mask->is_url())
         computed_values.set_mask(mask->as_url().url());
 
+    if (auto mask_image = computed_style.property(CSS::PropertyID::MaskImage); mask_image->is_url())
+        computed_values.set_mask(mask_image->as_url().url());
+
     if (auto fill_rule = computed_style.fill_rule(); fill_rule.has_value())
         computed_values.set_fill_rule(*fill_rule);
 
